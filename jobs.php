@@ -15,23 +15,8 @@ include_once 'inc/header.php';
     <section class="content-header">
       <div class="container">
         <div class="row">
-          <div class="col-md-12 latest-job margin-top-50 margin-bottom-20">
           <h1 class="text-center">Latest Jobs</h1>
-            <div class="input-group input-group-lg">
-                <input type="text" id="searchBar" class="form-control" placeholder="Search job">
-                <span class="input-group-btn">
-                  <button id="searchBtn" type="button" class="btn btn-info btn-flat">Go!</button>
-                </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-    
-    <section id="candidates" class="content-header">
-      <div class="container">
-        <div class="row">
-          <div class="col-md-3">
+           <div class="col-md-3 latest-job margin-top-50">
             <div class="box box-solid">
               <div class="box-header with-border">
                 <h3 class="box-title">Filters</h3>
@@ -81,23 +66,37 @@ include_once 'inc/header.php';
               </div>
             </div>
           </div>
-          <div class="col-md-9">
+          <div class="col-md-9 latest-job margin-top-50 margin-bottom-20">
+            <div class="input-group input-group-lg margin-bottom-20">
+                <input type="text" id="searchBar" class="form-control" placeholder="Search job">
+                <span class="input-group-btn">
+                  <button id="searchBtn" type="button" class="btn btn-info btn-flat">Go!</button>
+                </span>
+            </div>
             <?php $limit = 4;
               $sql = "SELECT COUNT(id_jobpost) AS id FROM job_post";
               $result = $conn->query($sql);
-              if($result->num_rows > 0)
+              $total_records = 0;
+              $total_pages = 0;
+              if($result && $result->num_rows > 0)
               {
                 $row = $result->fetch_assoc();
-                $total_records = $row['id'];
-                $total_pages = ceil($total_records / $limit);
-              } else {
-                $total_pages = 1;
+                $total_records = (int) $row['id'];
+                if ($total_records > 0) {
+                  $total_pages = ceil($total_records / $limit);
+                } else {
+                  $total_pages = 0;
+                }
               }
             ?>
             <div id="target-content"></div>
             <div class="text-center">
               <ul class="pagination text-center" id="pagination"></ul>
             </div>
+            <script>
+              var initialCount = <?php echo json_encode($total_records); ?>;
+              var initialTotalPages = <?php echo json_encode($total_pages); ?>;
+            </script>
           </div>
         </div>
       </div>
@@ -108,20 +107,25 @@ include_once 'inc/header.php';
 <?php include_once 'inc/footer.php'; ?>
 
 <script>
-  function Pagination() {
+  function initPagination(pages) {
+    if (!pages || pages <= 0) {
+      $('#pagination').hide();
+      return;
+    }
+    $('#pagination').show();
     $("#pagination").twbsPagination({
-      totalPages: <?php echo $total_pages; ?>,
+      totalPages: pages,
       visible: 5,
-        onPageClick: function (e, page) {
-          e.preventDefault();
-          $("#target-content").html("loading....");
-          $("#target-content").load("search.php?page="+page);
+      onPageClick: function (e, page) {
+        e.preventDefault();
+        $("#target-content").html("loading....");
+        $("#target-content").load("search.php?page="+page);
       }
     });
   }
 
   $(function () {
-    Pagination();
+    initPagination(typeof initialTotalPages !== 'undefined' ? initialTotalPages : 1);
     // city checkbox multi-select handler
     $(document).on('change', '.cityCheckbox', function (e) {
       var selected = [];
@@ -129,13 +133,12 @@ include_once 'inc/header.php';
         selected.push($(this).val());
       });
 
+      try { $('#pagination').twbsPagination('destroy'); } catch (err) {}
       if (selected.length > 0) {
-        $('#pagination').twbsPagination('destroy');
         // join with comma; Search will encode value before sending
         Search(selected.join(','), 'city');
       } else {
-        $('#pagination').twbsPagination('destroy');
-        Pagination();
+        initPagination(typeof initialTotalPages !== 'undefined' ? initialTotalPages : 1);
       }
     });
   });
@@ -144,12 +147,11 @@ include_once 'inc/header.php';
     e.preventDefault();
     var searchResult = $("#searchBar").val();
     var filter = "searchBar";
+    try { $('#pagination').twbsPagination('destroy'); } catch (err) {}
     if(searchResult != "") {
-      $("#pagination").twbsPagination('destroy');
       Search(searchResult, filter);
     } else {
-      $("#pagination").twbsPagination('destroy');
-      Pagination();
+      initPagination(typeof initialTotalPages !== 'undefined' ? initialTotalPages : 1);
     }
   });
 
@@ -157,12 +159,11 @@ include_once 'inc/header.php';
   $(document).on('change', '.experienceRadio', function (e) {
     var searchResult = $(this).val();
     var filter = 'experience';
+    try { $('#pagination').twbsPagination('destroy'); } catch (err) {}
     if (searchResult != '') {
-      $("#pagination").twbsPagination('destroy');
       Search(searchResult, filter);
     } else {
-      $("#pagination").twbsPagination('destroy');
-      Pagination();
+      initPagination(typeof initialTotalPages !== 'undefined' ? initialTotalPages : 1);
     }
   });
 
@@ -170,12 +171,11 @@ include_once 'inc/header.php';
     e.preventDefault();
     var searchResult = $(this).data("target");
     var filter = "city";
+    try { $('#pagination').twbsPagination('destroy'); } catch (err) {}
     if(searchResult != "") {
-      $("#pagination").twbsPagination('destroy');
       Search(searchResult, filter);
     } else {
-      $("#pagination").twbsPagination('destroy');
-      Pagination();
+      initPagination(typeof initialTotalPages !== 'undefined' ? initialTotalPages : 1);
     }
   });
 
@@ -184,16 +184,17 @@ include_once 'inc/header.php';
     val = encodeURIComponent(val);
     $.get("search.php?action=count&filter="+filter+"&search="+val, function(countStr) {
       var count = parseInt(countStr, 10) || 0;
-      var totalPages = Math.max(1, Math.ceil(count / <?php echo $limit; ?>));
-      $("#pagination").twbsPagination({
-        totalPages: totalPages,
-        visible: 5,
-        onPageClick: function (e, page) {
-          e.preventDefault();
-          $("#target-content").html("loading....");
-          $("#target-content").load("search.php?page="+page+"&search="+val+"&filter="+filter);
-        }
-      });
+      if (count === 0) {
+        $("#target-content").html('<div class="text-center">No records found</div>');
+        $('#pagination').hide();
+        return;
+      }
+      $('#pagination').show();
+      var totalPages = Math.ceil(count / <?php echo $limit; ?>);
+      initPagination(totalPages);
+      // load first page of filtered results
+      $("#target-content").html("loading....");
+      $("#target-content").load("search.php?page=1&search="+val+"&filter="+filter);
     });
   }
 </script>

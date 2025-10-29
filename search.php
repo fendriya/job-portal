@@ -20,12 +20,12 @@ $sql = "SELECT * FROM job_post Order By id_jobpost DESC LIMIT $start_from, $limi
 // If caller only wants the total count for a given filter (used by pagination)
 if (isset($_GET['action']) && $_GET['action'] === 'count') {
   $filter = isset($_GET['filter']) ? $_GET['filter'] : '';
-  // decode once (client sends encoded value)
-  $searchRaw = isset($_GET['search']) ? urldecode($_GET['search']) : '';
+  // normalize incoming search value (client encodes it)
+  $search = isset($_GET['search']) ? urldecode($_GET['search']) : '';
 
   if ($filter === 'city') {
     // support multiple comma-separated cities
-    $cities = array_filter(array_map('trim', explode(',', $searchRaw)));
+    $cities = array_filter(array_map('trim', explode(',', $search)));
     if (count($cities) > 0) {
       $escaped = array();
       foreach ($cities as $c) {
@@ -38,7 +38,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'count') {
       $countSql = "SELECT COUNT(id_jobpost) AS cnt FROM job_post";
     }
   } elseif ($filter === 'searchBar') {
-    $countSql = "SELECT COUNT(id_jobpost) AS cnt FROM job_post WHERE jobtitle LIKE '%$search%'";
+    $s = $conn->real_escape_string($search);
+    $countSql = "SELECT COUNT(id_jobpost) AS cnt FROM job_post WHERE jobtitle LIKE '%$s%'";
   } elseif ($filter === 'experience') {
     $exp = (int) $search;
     $countSql = "SELECT COUNT(id_jobpost) AS cnt FROM job_post WHERE experience>='$exp'";
@@ -102,13 +103,14 @@ if (isset($_GET['filter']) && $_GET['filter'] === 'city') {
     }
 } else {
     // other filters: searchBar or experience
-    if (isset($_GET['filter']) && $_GET['filter'] === 'searchBar') {
-        $search = $conn->real_escape_string(isset($_GET['search']) ? $_GET['search'] : '');
-        $sql = "SELECT * FROM job_post WHERE jobtitle LIKE '%$search%' LIMIT $start_from, $limit";
-    } elseif (isset($_GET['filter']) && $_GET['filter'] === 'experience') {
-        $exp = (int) (isset($_GET['search']) ? $_GET['search'] : 0);
-        $sql = "SELECT * FROM job_post WHERE experience>='$exp' LIMIT $start_from, $limit";
-    }
+  if (isset($_GET['filter']) && $_GET['filter'] === 'searchBar') {
+    $searchRaw = isset($_GET['search']) ? urldecode($_GET['search']) : '';
+    $search = $conn->real_escape_string($searchRaw);
+    $sql = "SELECT * FROM job_post WHERE jobtitle LIKE '%$search%' LIMIT $start_from, $limit";
+  } elseif (isset($_GET['filter']) && $_GET['filter'] === 'experience') {
+    $exp = (int) (isset($_GET['search']) ? urldecode($_GET['search']) : 0);
+    $sql = "SELECT * FROM job_post WHERE experience>='$exp' LIMIT $start_from, $limit";
+  }
 
     $result = $conn->query($sql);
     if ($result && $result->num_rows > 0) {
