@@ -82,7 +82,6 @@ require_once("../db.php");
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       </div>
