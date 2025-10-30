@@ -35,7 +35,7 @@ include_once 'inc/header.php';
       <div class="collapse navbar-collapse" id="navbar-collapse">
         <ul class="nav navbar-nav navbar-right">
           <li><a href="jobs.php">Jobs</a></li>
-          <li><a href="#candidates">Candidates</a></li>
+          <!-- <li><a href="#candidates">Candidates</a></li> -->
           <li><a href="#company">Company</a></li>
           <li><a href="#about">About Us</a></li>
           <?php if(empty($_SESSION['id_user']) && empty($_SESSION['id_company'])) { ?>
@@ -114,7 +114,7 @@ include_once 'inc/header.php';
       </div>
     </section>
 
-    <section id="candidates" class="content-header">
+    <!-- <section id="candidates" class="content-header">
       <div class="container">
         <div class="row">
           <div class="col-md-12 text-center latest-job margin-bottom-20">
@@ -149,7 +149,7 @@ include_once 'inc/header.php';
           </div>
         </div>
       </div>
-    </section>
+    </section> -->
 
     <section id="company" class="content-header">
       <div class="container">
